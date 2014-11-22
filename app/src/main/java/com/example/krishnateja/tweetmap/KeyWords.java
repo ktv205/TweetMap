@@ -1,18 +1,24 @@
 package com.example.krishnateja.tweetmap;
 
 import android.app.Activity;
+import android.app.ProgressDialog;
 import android.app.SearchManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.JsonReader;
+import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.SearchView;
 import android.widget.TextView;
@@ -21,6 +27,7 @@ import android.widget.Toast;
 import com.example.krishnateja.tweetmap.models.KeyWordsModel;
 import com.example.krishnateja.tweetmap.models.RequestPackage;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -35,20 +42,53 @@ import java.util.Set;
 
 
 public class KeyWords extends Activity {
-    ListView keywordsListView;
-    ArrayAdapter array;
-    SharedPreferences keywordPreference;
-    SharedPreferences.Editor keywordsEditor;
+    private ListView keywordsListView;
+    private int number = 1;
+    private List<KeyWordsModel> globalKeyWordsModelList = new ArrayList<KeyWordsModel>();
+    private static int size;
+    private ProgressDialog progress;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_key_words);
-        keywordsListView = (ListView) findViewById(R.id.keyword_listview);
-        if (handleIntent(getIntent())) {
+        if (!checkForInternet()) {
+            LinearLayout linear = new LinearLayout(this);
+            TextView text = new TextView(this);
+            text.setText("InternetConnectionUnAvailable");
+            linear.addView(text);
+            setContentView(linear);
         } else {
-            new MyAsyncTask().execute("");
+            setContentView(R.layout.activity_key_words);
+            View footerView = ((LayoutInflater) this.getSystemService(Context.LAYOUT_INFLATER_SERVICE)).inflate(R.layout.footer_content, null, false);
+            keywordsListView = (ListView) findViewById(R.id.keyword_listview);
+            keywordsListView.addFooterView(footerView);
+            new getKeywordsAsyncTask().execute(setRequestPackage());
+
         }
+    }
+
+    public boolean checkForInternet() {
+        ConnectivityManager manager =
+                (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo active = manager.getActiveNetworkInfo();
+        if (active != null && active.isConnected()) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    public RequestPackage setRequestPackage() {
+        RequestPackage requestPackage = new RequestPackage();
+        requestPackage.setURI("http://testappnew1-1-1-env.elasticbeanstalk.com/twittMap/tweets.php");
+        requestPackage.setMethod("POST");
+        requestPackage.setParam("key", "keywords");
+        requestPackage.setParam("number", String.valueOf(number));
+        requestPackage.setFlag(0);
+        Log.d("RequestPackage-KeyWordsActivity", requestPackage.getEncodedParams());
+        number++;
+        return requestPackage;
+
     }
 
     private boolean handleIntent(Intent intent) {
@@ -99,116 +139,63 @@ public class KeyWords extends Activity {
         return super.onOptionsItemSelected(item);
     }
 
-    public class MyAsyncTask extends AsyncTask<String, String, String[]> {
-
+    public class getKeywordsAsyncTask extends AsyncTask<RequestPackage, String, List<KeyWordsModel>> {
+        ProgressDialog progress;
         @Override
         protected void onPreExecute() {
-
+            progress = new ProgressDialog(KeyWords.this);
+            progress.setTitle("Loading");
+            progress.setMessage("Wait while loading...");
+            progress.show();
         }
 
         @Override
-        protected String[] doInBackground(String... params) {
-            URL url = null;
-            try {
-                url = new URL("http://54.85.154.149/tweetmap/keywords.php");
-            } catch (MalformedURLException e) {
-                e.printStackTrace();
-            }
-            HttpURLConnection con = null;
-            try {
-                con = (HttpURLConnection) url.openConnection();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            InputStream in = null;
-            try {
-                in = con.getInputStream();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            StringBuilder builder = new StringBuilder();
-            InputStreamReader is = new InputStreamReader(in);
-            JsonReader reader = new JsonReader(is);
-            List messages = new ArrayList<KeyWordsModel>();
-            try {
-                reader.beginArray();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            try {
-                while (reader.hasNext()) {
-                    messages.add(readMessage(reader));
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            try {
-                reader.endArray();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            try {
-                reader.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            return StringList(messages);
-
-
-        }
-
-        public String[] StringList(List messages) {
-            String[] keywords = new String[messages.size()];
-            KeyWordsModel model = null;
-            for (int i = 0; i < messages.size(); i++) {
-                model = (KeyWordsModel) messages.get(i);
-                keywords[i] = model.getKeyword();
-            }
-            return keywords;
-        }
-
-        public KeyWordsModel readMessage(JsonReader reader) throws IOException {
-            String keyWord = null;
-            int count = 0;
-            reader.beginObject();
-            while (reader.hasNext()) {
-                String name = reader.nextName();
-                if (name.equals("keyword")) {
-                    keyWord = reader.nextString();
-                } else if (name.equals("noOfTweets")) {
-                    count = reader.nextInt();
-                } else {
-                    reader.skipValue();
-                }
-
-            }
-            reader.endObject();
-            return new KeyWordsModel(keyWord, count);
+        protected List<KeyWordsModel> doInBackground(RequestPackage... params) {
+            Log.d("doInBackGround-KeyWordsActivity", "here");
+            return new RemoteConnection().getDataKeywords(params[0]);
         }
 
         @Override
-        protected void onPostExecute(String[] s) {
-            Set<String> mySet = new HashSet<String>(Arrays.asList(s));
-            keywordPreference = getSharedPreferences("KEYWORDLISTSHARED", MODE_PRIVATE);
-            keywordsEditor = keywordPreference.edit();
-            keywordsEditor.putStringSet("KEYWORDSET", mySet);
-            keywordsEditor.commit();
-            ArrayAdapter array = new ArrayAdapter(KeyWords.this, android.R.layout.simple_list_item_1, s);
-            keywordsListView.setAdapter(array);
+        protected void onPostExecute(List<KeyWordsModel> s) {
+                progress.dismiss();
+            Log.d("onPostExecute-KeyWordsActivity", s.toString());
+            for (int i = 0; i < s.size(); i++) {
+                globalKeyWordsModelList.add(s.get(i));
+            }
+            size = globalKeyWordsModelList.size();
+            keywordsListView.setAdapter(new KeywordsAdapter(KeyWords.this, size, globalKeyWordsModelList));
+            if (number > 1) {
+                keywordsListView.setSelection(size - 200);
+            }
             keywordsListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
                 @Override
                 public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                    TextView keywordClicked = (TextView) view.findViewById(android.R.id.text1);
-                    makeRequest(keywordClicked.getText().toString());
+                    View id1 = view.findViewById(R.id.footer_1);
+                    if (id1 != null) {
+                        if (id1.getId() == R.id.footer_1) {
+                            reLoad();
+                        }
+                    }
+                    if (id1 == null) {
+                        TextView keywordClicked = (TextView) view.findViewById(R.id.keyword_text);
+                        makeRequest(keywordClicked.getText().toString());
+                    }
+                    //TextView keywordClicked = (TextView) view.findViewById(android.R.id.text1);
+                    //makeRequest(keywordClicked.getText().toString());
                 }
             });
         }
 
+        private void reLoad() {
+            Log.d("here in reload", "do something");
+            new getKeywordsAsyncTask().execute(setRequestPackage());
+        }
     }
 
     private void makeRequest(String s) {
         RequestPackage rp = new RequestPackage();
-        rp.setURI("http://54.85.154.149/tweetmap/tweets_keyword.php");
+        rp.setURI("http://54.173.51.136/tweetmap/tweets_keyword.php");
+        rp.setParam("key", "tweets");
         rp.setParam("keyword", s);
         rp.setMethod("POST");
         new GetTweetsAsyncTask(this).execute(rp);

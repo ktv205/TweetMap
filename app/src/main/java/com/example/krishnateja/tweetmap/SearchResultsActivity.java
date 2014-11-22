@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.app.SearchManager;
 import android.content.Context;
 import android.content.Intent;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
@@ -16,6 +17,7 @@ import android.widget.SearchView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.example.krishnateja.tweetmap.models.KeyWordsModel;
 import com.example.krishnateja.tweetmap.models.RequestPackage;
 
 import java.util.ArrayList;
@@ -26,13 +28,16 @@ import java.util.Set;
 public class SearchResultsActivity extends Activity {
     private ListView list;
     private ArrayAdapter<String> arrayAdapter;
-    private final static String DEBUG="SearchResultsActivity";
+    private final static String DEBUG = "SearchResultsActivity";
+    private RequestPackage requestPackage;
+    private List<KeyWordsModel> globalKeyWordsModelList = new ArrayList<KeyWordsModel>();
+    private static int size;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_search_results);
-        list = (ListView) findViewById(R.id.list_view);
+        list = (ListView) findViewById(R.id.list_view_search);
         handleIntent(getIntent());
     }
 
@@ -46,40 +51,26 @@ public class SearchResultsActivity extends Activity {
     private void handleIntent(Intent intent) {
         if (Intent.ACTION_SEARCH.equals(intent.getAction())) {
             String query = intent.getStringExtra(SearchManager.QUERY);
-             Set<String> keywords=getSharedPreferences("KEYWORDLISTSHARED",MODE_PRIVATE)
-                                  .getStringSet("KEYWORDSET",null);
-
-            List results =new ArrayList();
-            results=serachKeyWords(query,keywords);
-            if (results!= null) {
-                arrayAdapter = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1,results);
-                list.setAdapter(arrayAdapter);
-                list.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-                    @Override
-                    public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                        TextView keywordClicked=(TextView)view.findViewById(android.R.id.text1);
-                        makeRequest(keywordClicked.getText().toString());
-                    }
-                });
-            }
+            setRequestParams(query);
+            new SearchAsycTask().execute(requestPackage);
         }
     }
-    private void makeRequest(String s) {
-        RequestPackage rp=new RequestPackage();
-        rp.setURI("http://54.85.154.149/tweetmap/tweets_keyword.php");
-        rp.setParam("keyword",s);
-        rp.setMethod("POST");
-        new GetTweetsAsyncTask(this).execute(rp);
+
+    public void setRequestParams(String s) {
+        requestPackage = new RequestPackage();
+        requestPackage.setParam("key", "search");
+        requestPackage.setParam("keyword", s);
+        requestPackage.setMethod("POST");
+        requestPackage.setURI("http://54.173.51.136/tweetmap/tweets.php");
     }
 
-    public List serachKeyWords(String query, Set<String> keywords) {
-        List result = new ArrayList();
-       for(String s : keywords){
-           if(s.contains(query)){
-               result.add(s);
-           }
-       }
-        return result;
+    private void makeRequest(String s) {
+        RequestPackage rp = new RequestPackage();
+        rp.setURI("http://54.173.51.136/tweetmap/tweets_keyword.php");
+        rp.setParam("keyword", s);
+        rp.setParam("key", "tweets");
+        rp.setMethod("POST");
+        new GetTweetsAsyncTask(this).execute(rp);
     }
 
 
@@ -98,16 +89,31 @@ public class SearchResultsActivity extends Activity {
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
-
-        //noinspection SimplifiableIfStatement
         if (id == R.id.action_settings) {
             return true;
         }
-
         return super.onOptionsItemSelected(item);
+    }
+
+    public class SearchAsycTask extends AsyncTask<RequestPackage, Integer, List<KeyWordsModel>> {
+        @Override
+        protected List<KeyWordsModel> doInBackground(RequestPackage... params) {
+            return new RemoteConnection().getDataKeywords(params[0]);
+        }
+
+        @Override
+        protected void onPostExecute(List<KeyWordsModel> keyWordsModels) {
+            globalKeyWordsModelList = keyWordsModels;
+            size = globalKeyWordsModelList.size();
+            list.setAdapter(new KeywordsAdapter(SearchResultsActivity.this, size, globalKeyWordsModelList));
+            list.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+                @Override
+                public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                    TextView keywordClicked=(TextView)view.findViewById(R.id.keyword_text);
+                    makeRequest(keywordClicked.getText().toString());
+                }
+            });
+        }
     }
 }

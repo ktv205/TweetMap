@@ -12,6 +12,15 @@ public class RequestPackage {
     private String URI;
     private String method="GET";
     private Map<String,String> params=new HashMap<String, String>();
+    private int flag;
+
+    public int getFlag() {
+        return flag;
+    }
+
+    public void setFlag(int flag) {
+        this.flag = flag;
+    }
 
     public String getURI() {
         return URI;

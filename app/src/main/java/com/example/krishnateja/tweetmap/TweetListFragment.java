@@ -34,8 +34,7 @@ public class TweetListFragment extends Fragment {
         Bundle bundle = getArguments();
         TweetList tweetList = bundle.getParcelable("PARCELTOLISTFRAGMENT");
         if (tweetList != null) {
-            ArrayAdapter array = new ArrayAdapter(getActivity(), android.R.layout.simple_list_item_1, getTweets(tweetList));
-            list.setAdapter(array);
+            list.setAdapter(new TweetAdapter(getActivity(),tweetList.getTweetModelList().size(),tweetList.getTweetModelList()));
             list.setOnItemClickListener(new AdapterView.OnItemClickListener() {
                 @Override
                 public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
