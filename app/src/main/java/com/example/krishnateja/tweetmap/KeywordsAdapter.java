@@ -29,7 +29,7 @@ public class KeywordsAdapter extends BaseAdapter {
 
     @Override
     public int getCount() {
-        Log.d("getCount-KeywordsAdapter", size + "");
+        //Log.d("getCount-KeywordsAdapter", size + "");
         return size;
     }
 

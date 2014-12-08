@@ -19,6 +19,8 @@ import android.widget.Toast;
 
 import com.example.krishnateja.tweetmap.models.KeyWordsModel;
 import com.example.krishnateja.tweetmap.models.RequestPackage;
+import com.example.krishnateja.tweetmap.models.TweetModel;
+import com.example.krishnateja.tweetmap.models.TweetmapPreferences;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -61,14 +63,23 @@ public class SearchResultsActivity extends Activity {
         requestPackage.setParam("key", "search");
         requestPackage.setParam("keyword", s);
         requestPackage.setMethod("POST");
-        requestPackage.setURI("http://54.173.51.136/tweetmap/tweets.php");
+        requestPackage.setURI("http://"+ TweetmapPreferences.ipAdd+"/tweetmap/tweets.php");
     }
 
     private void makeRequest(String s) {
         RequestPackage rp = new RequestPackage();
-        rp.setURI("http://54.173.51.136/tweetmap/tweets_keyword.php");
-        rp.setParam("keyword", s);
+        rp.setURI("http://"+ TweetmapPreferences.ipAdd+"/tweetmap/tweets_keyword.php");
+        TweetmapPreferences.keyword=s;
+        TweetmapPreferences.number=0;
+        //TweetmapPreferences.tweetModelListGlobal=null;
+        TweetmapPreferences.tweetModelListGlobal=new ArrayList<TweetModel>();
+        TweetmapPreferences.flagGlobal=0;
+        rp.setParam("keyword", TweetmapPreferences.keyword);
         rp.setParam("key", "tweets");
+        rp.setParam("number",String.valueOf(TweetmapPreferences.number));
+        Log.d("in search results", "TweetPreferences.number ->" + TweetmapPreferences.number);
+        Log.d("in search results","TweetPreferences.keyword->"+TweetmapPreferences.keyword);
+        TweetmapPreferences.number++;
         rp.setMethod("POST");
         new GetTweetsAsyncTask(this).execute(rp);
     }
