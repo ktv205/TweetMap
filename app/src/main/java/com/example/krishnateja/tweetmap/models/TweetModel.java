@@ -13,9 +13,19 @@ public class TweetModel implements Parcelable {
     private String tweet;
     private double lat;
     private double lng;
+    private String screenName;
 
 
 
+    public TweetModel(String tweetId, String name, String location, String tweet,double lat,double lng,String screenName) {
+        this.tweetId = tweetId;
+        this.name = name;
+        this.location = location;
+        this.tweet = tweet;
+        this.lat=lat;
+        this.lng=lng;
+        this.screenName=screenName;
+    }
     public TweetModel(String tweetId, String name, String location, String tweet,double lat,double lng) {
         this.tweetId = tweetId;
         this.name = name;
@@ -23,6 +33,7 @@ public class TweetModel implements Parcelable {
         this.tweet = tweet;
         this.lat=lat;
         this.lng=lng;
+
     }
     public double getLat() {
         return lat;
@@ -47,6 +58,7 @@ public class TweetModel implements Parcelable {
     public String getTweet() {
         return tweet;
     }
+    public String getScreenName(){return screenName;}
 
     @Override
     public int describeContents() {
@@ -61,6 +73,7 @@ public class TweetModel implements Parcelable {
         dest.writeString(tweet);
         dest.writeDouble(lat);
         dest.writeDouble(lng);
+        dest.writeString(screenName);
     }
     private TweetModel(Parcel in) {
         tweetId = in.readString();
@@ -69,6 +82,7 @@ public class TweetModel implements Parcelable {
         tweet=in.readString();
         lat=in.readDouble();
         lng=in.readDouble();
+        screenName=in.readString();
 
     }
     public static final Parcelable.Creator<TweetModel> CREATOR = new Parcelable.Creator<TweetModel>() {

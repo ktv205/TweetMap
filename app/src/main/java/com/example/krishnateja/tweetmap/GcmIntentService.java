@@ -8,6 +8,7 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.ResultReceiver;
 import android.os.SystemClock;
 import android.util.Log;
 
@@ -20,6 +21,7 @@ public class GcmIntentService  extends IntentService {
     private final static String TAG="GcmIntentService";
     public static final int NOTIFICATION_ID = 1;
     private NotificationManager mNotificationManager;
+    private ResultReceiver receiver;
     Notification.Builder builder;
     public GcmIntentService() {
         super("name");
@@ -79,6 +81,11 @@ public class GcmIntentService  extends IntentService {
                 .setContentText(msg);
         builder.setContentIntent(contentIntent);
         mNotificationManager.notify(NOTIFICATION_ID,builder.build());
+        Bundle b = new Bundle();
+        b.putString("tweetjson",msg);
+        if (receiver != null) {
+            receiver.send(1, b);
+        }
 
 
     }

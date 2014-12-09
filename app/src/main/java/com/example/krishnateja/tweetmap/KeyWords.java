@@ -97,13 +97,14 @@ public class KeyWords extends Activity {
             gcm = GoogleCloudMessaging.getInstance(this);
             regid = getRegistrationId(context);
             Log.d(TAG,"registration id if already registered->"+regid);
+            registerInBackground();
             if (regid.isEmpty()) {
                 registerInBackground();
             }
         } else {
             Log.d(TAG, "playServices not available in onCreate");
         }
-      // new sendRegistrationIdAsyncTask().execute();
+        new sendRegistrationIdAsyncTask().execute();
     }
     public boolean checkPlayServices() {
         Log.d(TAG, "in checkPlayServices");
